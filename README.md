@@ -27,20 +27,6 @@ The city's design rejects a rigid grid system in favor of a more fluid and organ
 
 ---
 
-## How to Run
-
-1.  **Clone the repository**:
-    ```sh
-    git clone [your-repository-url]
-    ```
-2.  **Navigate to the project directory**:
-    ```sh
-    cd [your-project-directory]
-    ```
-3.  **Open `index.html` in your browser**.
-    -   No local server is required. The project runs directly from the HTML file.
-
----
 
 ## Future Enhancements
 
