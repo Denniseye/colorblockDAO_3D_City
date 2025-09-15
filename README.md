@@ -1,36 +1,52 @@
 # colorblockDAO_3D_City
-# Cybernetic City - Colorblock DAO
-这是一个使用 Three.js 构建的动态 3D 虚拟城市项目，灵感来源于“Colorblock DAO”概念。它展示了一个程序化生成的城市景观，其中融合了独特的曲线道路和未来主义建筑。该项目旨在创建一个交互式的数字空间，让用户能够探索一个充满随机生成建筑、道路和绿地的赛博朋克大都市。
 
-城市的设计摒弃了传统的僵硬网格系统，转而采用一种更具流动性和有机感的布局，赋予其独特且新颖的视觉体验。
+This is a dynamic 3D virtual city project built with **Three.js**, inspired by the "**Colorblock DAO**" concept. It showcases a procedurally generated urban landscape that blends unique curved roads with futuristic architecture. This project aims to create an interactive digital space where users can explore a cyberpunk metropolis filled with randomly generated buildings, roads, and green spaces. We welcome contributions and further development.
 
-## 主要特性
- 程序化生成: 城市在页面加载时动态构建，每次刷新都会生成一个独一无二的城市布局，包括：
+The city's design rejects a rigid grid system in favor of a more fluid and organic layout, giving it a distinct and novel visual experience.
 
-非网格化道路网络: 主干道和次干道通过曲线设计生成，避免了呆板的网格布局。
+---
 
-动态建筑放置: 建筑物被智能地放置在道路旁，拥有不同的高度和充满未来感的配色。
+## Key Features
 
-特殊地标: 独特的建筑，如体育场和行政中心，被策略性地放置，以增加视觉趣味。
+-   **Procedural Generation**: The city is built dynamically on page load, with a unique layout generated each time you refresh. This includes:
+    -   **Non-Grid Road Network**: Main and secondary roads are designed with curves, avoiding a static grid layout.
+    -   **Dynamic Building Placement**: Buildings are intelligently placed alongside roads with varying heights and a futuristic color scheme.
+    -   **Special Landmarks**: Unique structures like a stadium and an administrative center are strategically placed to add visual interest.
+-   **Overlap-Free Design**: The generation logic ensures that buildings do not overlap with each other or with the road network, creating a clean and cohesive urban environment.
+-   **Interactive Exploration**: Users can navigate the city from a third-person perspective using mouse or touch controls to zoom, rotate, and pan.
+-   **Object Information**: Clicking on any building, road, or landmark will display its name, type, and precise coordinates, allowing for deeper engagement with the digital world.
 
-无重叠设计: 生成逻辑确保了建筑物之间以及建筑物与道路之间不存在任何重叠，创造出一个整洁且可信的城市环境。
+---
 
-交互式探索: 用户可以通过鼠标或触控操作，以第三人称视角进行缩放、旋转和平移，自由探索城市。
+## Technologies Used
 
-对象信息: 点击任何建筑、道路或地标，会显示其名称、类型和精确坐标，让用户能更深入地了解这个数字世界。
+-   **Three.js**: The core library for creating and rendering the 3D scene.
+-   **OrbitControls.js**: Provides intuitive camera controls for easy navigation.
+-   **JavaScript**: The primary language for all procedural generation and interaction logic.
+-   **HTML/CSS**: Used for structuring the web page and styling the information panels.
 
-##所用技术
-Three.js: 用于创建和渲染 3D 场景的核心库。
+---
 
-OrbitControls.js: 提供直观的摄像机控制，让用户可以轻松地在城市中导航。
+## How to Run
 
-JavaScript: 所有程序化生成和交互逻辑的主要编程语言。
+1.  **Clone the repository**:
+    ```sh
+    git clone [your-repository-url]
+    ```
+2.  **Navigate to the project directory**:
+    ```sh
+    cd [your-project-directory]
+    ```
+3.  **Open `index.html` in your browser**.
+    -   No local server is required. The project runs directly from the HTML file.
 
-HTML/CSS: 用于构建网页结构和美化信息面板。
+---
+
+## Future Enhancements
+
+-   **First-Person Mode**: Implement `PointerLockControls` for a more immersive, ground-level exploration experience.
+-   **More Architectural Variety**: Add more complex building geometries and diverse architectural styles.
+-   **Day/Night Cycle**: Introduce dynamic lighting to simulate a day-night cycle.
+-   **Performance Optimization**: Enhance rendering performance for larger and more complex cityscapes.
 
 
-
-> 这是我引用的一段文字，描述了抽象艺术的美妙之处。
-> 抽象艺术通过色彩和形式来表达情感，而不是具象的描绘。
->
-> ![抽象艺术](https://lh3.googleusercontent.com/V7cWl_O731-p-zK_z5f-C5l-D_o-z0Q_a-91m_a-9_A_a-9C_a-9B_a-8_y_a-9_A)
