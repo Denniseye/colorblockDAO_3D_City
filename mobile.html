@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Colorblock DAO - The Cybernetic City</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0d0d1a;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #d1d1f0;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 8px 12px;
+            border-radius: 5px;
+            z-index: 100;
+            font-size: 1.2rem;
+            text-shadow: 0 0 5px #00FFFF;
+        }
+        #details {
+            position: absolute;
+            top: 60px;
+            left: 10px;
+            color: #d1d1f0;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 5px;
+            z-index: 100;
+            font-size: 1rem;
+            width: 250px;
+            box-shadow: 0 0 10px rgb(0, 255, 255);
+            display: none;
+        }
+        #details h3 {
+            margin-top: 0;
+            color: #00FFFF;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+<div id="info">Welcome to Colorblock DAO!</div>
+<div id="details">
+    <h3>Object Info</h3>
+    <p id="detail-name"></p>
+    <p id="detail-type"></p>
+    <p id="detail-position"></p>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+    // --- Scene Setup ---
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a0a14);
+
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(160, 240, 160);
+    camera.lookAt(0, 0, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+    renderer.shadowMap.enabled = true;
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+
+    // --- Lighting ---
+    const ambientLight = new THREE.AmbientLight(0x222233, 1);
+    scene.add(ambientLight);
+
+    const directionalLight = new THREE.DirectionalLight(0xbe58e5, 1.5);
+    directionalLight.position.set(200, 200, 200);
+    directionalLight.castShadow = true;
+    scene.add(directionalLight);
+
+    directionalLight.shadow.mapSize.width = 4096;
+    directionalLight.shadow.mapSize.height = 4096;
+    directionalLight.shadow.camera.near = 10;
+    directionalLight.shadow.camera.far = 400;
+    directionalLight.shadow.camera.left = -240;
+    directionalLight.shadow.camera.right = 240;
+    directionalLight.shadow.camera.top = 240;
+    directionalLight.shadow.camera.bottom = -240;
+
+    // --- Ground Plane ---
+    const groundGeometry = new THREE.PlaneGeometry(320, 320);
+    const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x11111a, roughness: 0.8, metalness: 0.5 });
+    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    // --- City Generation Parameters ---
+    const MAP_SIZE = 240;
+    const placedObjects = [];
+    const allRoads = [];
+    const color = {
+        road: new THREE.Color(0x00FFFF),
+        roadHighlight: new THREE.Color(0x76FFFF),
+        building: new THREE.Color(0x6A0DAD),
+        buildingHighlight: new THREE.Color(0x9A3EDD),
+        greenery: new THREE.Color(0x32CD32),
+        special: new THREE.Color(0x884488),
+    };
+
+    const names = {
+        roads: ['Binary Boulevard', 'Quantum Quarter', 'Neon Nexus', 'Data Drive', 'Ghost Alley', 'Cyber Bridge', 'Fusion Freeway', 'Glitch Grove', 'Helix Highway', 'Pixel Promenade', 'Circuit Crossing', 'Protocol Path', 'Digital Drift', 'Matrix Mews', 'Vortex Way'],
+        buildings: ['Aetherium Tower', 'Nexus Spire', 'Arcane Citadel', 'Chronos Peak', 'Data Core', 'Echelon Tower', 'Fusion Fortress', 'Gridlock Plaza', 'Hyperion Skyscraper', 'Infinium Hall', 'Labyrinth', 'Monolith', 'Cypherium Condos', 'Octane Outpost', 'Resonance Residence', 'Synthetica Studios', 'Tesseract Tower', 'Zenith Ziggurat', 'Dynamo Dome', 'Cryptograph Complex'],
+        special: ['Nest Stadium', 'Administrative Citadel', 'Infinity Plaza', 'Nexus Hub']
+    };
+
+    // --- Collision and Road Proximity ---
+    function isColliding(x, z, sizeX, sizeZ) {
+        for (const placed of placedObjects) {
+            const minX1 = x - sizeX / 2;
+            const maxX1 = x + sizeX / 2;
+            const minZ1 = z - sizeZ / 2;
+            const maxZ1 = z + sizeZ / 2;
+
+            const minX2 = placed.x - (placed.sizeX || placed.size) / 2 - 2;
+            const maxX2 = placed.x + (placed.sizeX || placed.size) / 2 + 2;
+            const minZ2 = placed.z - (placed.sizeZ || placed.size) / 2 - 2;
+            const maxZ2 = placed.z + (placed.sizeZ || placed.size) / 2 + 2;
+
+            if (maxX1 > minX2 && minX1 < maxX2 && maxZ1 > minZ2 && minZ1 < maxZ2) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function isNearRoad(x, z, maxDistance) {
+        for (const road of allRoads) {
+            const distance = Math.sqrt(Math.pow(x - road.x, 2) + Math.pow(z - road.z, 2));
+            // Check if near a road (including overlapping)
+            if (distance < road.width / 2 + maxDistance) {
+                return { isNear: true, isOverlapping: distance < road.width / 2, road: road };
+            }
+        }
+        return { isNear: false, isOverlapping: false, road: null };
+    }
+
+    // --- Centralized Object Creation ---
+    function createObject(type, { x, z, sizeX, sizeZ, height, name = '', geometry, material }) {
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.set(x, height / 2, z);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        mesh.name = name;
+        mesh.userData.type = type;
+        scene.add(mesh);
+        placedObjects.push({ x, z, sizeX, sizeZ, size: sizeX || sizeZ });
+        return mesh;
+    }
+
+    // --- Phase 1: Create Main Roads (Non-grid) ---
+    function createMainRoads() {
+        const numMainRoads = Math.floor(Math.random() * 3) + 2;
+        const mainRoadWidth = 10;
+        const roadMaterial = new THREE.MeshStandardMaterial({ color: color.road, roughness: 0.5, metalness: 0.5, emissive: 0x008888, emissiveIntensity: 0.5 });
+
+        for (let i = 0; i < numMainRoads; i++) {
+            const start = new THREE.Vector3((Math.random() - 0.5) * MAP_SIZE, 0, (Math.random() - 0.5) * MAP_SIZE);
+            const end = new THREE.Vector3((Math.random() - 0.5) * MAP_SIZE, 0, (Math.random() - 0.5) * MAP_SIZE);
+            const cp1 = new THREE.Vector3((Math.random() - 0.5) * MAP_SIZE, 0, (Math.random() - 0.5) * MAP_SIZE);
+            const cp2 = new THREE.Vector3((Math.random() - 0.5) * MAP_SIZE, 0, (Math.random() - 0.5) * MAP_SIZE);
+
+            const curve = new THREE.CubicBezierCurve3(start, cp1, cp2, end);
+            const geometry = new THREE.TubeGeometry(curve, 200, mainRoadWidth / 2, 8, false);
+
+            const roadMesh = createObject('road', {
+                x: 0, z: 0, height: 0,
+                name: names.roads[Math.floor(Math.random() * names.roads.length)],
+                geometry: geometry,
+                material: roadMaterial
+            });
+            roadMesh.position.y = 0;
+
+            for (const point of curve.getPoints(200)) {
+                allRoads.push({ x: point.x, z: point.z, width: mainRoadWidth });
+            }
+        }
+    }
+
+    // --- Phase 2: Weave Secondary Street Network ---
+    function createSecondaryRoads() {
+        const numSecondaryRoads = 50;
+        const secondaryRoadWidth = 4;
+        const roadMaterial = new THREE.MeshStandardMaterial({ color: color.road, roughness: 0.5, metalness: 0.5, emissive: 0x008888, emissiveIntensity: 0.5 });
+
+        for (let i = 0; i < numSecondaryRoads; i++) {
+            const mainRoadPoint = allRoads[Math.floor(Math.random() * allRoads.length)];
+            const startPoint = new THREE.Vector3(mainRoadPoint.x, 0, mainRoadPoint.z);
+
+            const angle = Math.random() * Math.PI * 2;
+            const length = Math.random() * 40 + 10;
+            const endPoint = new THREE.Vector3(startPoint.x + Math.cos(angle) * length, 0, startPoint.z + Math.sin(angle) * length);
+
+            const line = new THREE.LineCurve3(startPoint, endPoint);
+            const geometry = new THREE.TubeGeometry(line, 20, secondaryRoadWidth / 2, 6, false);
+
+            const roadMesh = createObject('road', {
+                x: 0, z: 0, height: 0,
+                name: names.roads[Math.floor(Math.random() * names.roads.length)],
+                geometry: geometry,
+                material: roadMaterial
+            });
+            roadMesh.position.y = 0;
+
+            for (const point of line.getPoints(20)) {
+                allRoads.push({ x: point.x, z: point.z, width: secondaryRoadWidth });
+            }
+        }
+    }
+
+    // --- Phase 3: Dynamically Place Buildings and Greenery ---
+    function placeBuildings() {
+        const buildingCount = 500;
+        const maxBuildingHeight = 45;
+        const buildingSize = 5;
+        const buildingMaterial = new THREE.MeshStandardMaterial({
+            color: color.building, roughness: 0.4, metalness: 0.5, transparent: true, opacity: 0.9, emissive: 0x6A0DAD, emissiveIntensity: 0.3
+        });
+
+        for (let i = 0; i < buildingCount; i++) {
+            let posX, posZ, attempts = 0, positionFound = false, roadInfo;
+
+            while (!positionFound && attempts < 100) {
+                posX = (Math.random() - 0.5) * MAP_SIZE * 0.9;
+                posZ = (Math.random() - 0.5) * MAP_SIZE * 0.9;
+                roadInfo = isNearRoad(posX, posZ, 10); // Check with larger distance
+                if (roadInfo.isNear && !roadInfo.isOverlapping && !isColliding(posX, posZ, buildingSize, buildingSize)) {
+                    positionFound = true;
+                }
+                attempts++;
+            }
+
+            if (positionFound) {
+                const height = Math.random() * maxBuildingHeight + 10;
+                const buildingGeometry = new THREE.BoxGeometry(buildingSize, height, buildingSize);
+                const building = createObject('building', {
+                    x: posX, z: posZ, sizeX: buildingSize, sizeZ: buildingSize, height,
+                    name: names.buildings[Math.floor(Math.random() * names.buildings.length)],
+                    geometry: buildingGeometry,
+                    material: buildingMaterial
+                });
+
+                const roadAngle = Math.atan2(roadInfo.road.z - posZ, roadInfo.road.x - posX);
+                building.rotation.y = roadAngle + Math.PI / 2;
+            }
+        }
+    }
+
+    function createSpecialBuilding(x, z, type) {
+        let sizeX, sizeZ, height, geometry, name, material;
+        switch(type) {
+            case 'stadium':
+                sizeX = 30; sizeZ = 30; height = 8;
+                geometry = new THREE.CylinderGeometry(sizeX / 2, sizeX / 2, height, 32);
+                material = new THREE.MeshStandardMaterial({ color: color.special, roughness: 0.6, metalness: 0.4 });
+                name = names.special[0];
+                break;
+            case 'admin_hall':
+                sizeX = 40; sizeZ = 25; height = 15;
+                geometry = new THREE.BoxGeometry(sizeX, height, sizeZ);
+                material = new THREE.MeshStandardMaterial({ color: color.special, roughness: 0.4, metalness: 0.5 });
+                name = names.special[1];
+                break;
+        }
+        createObject('special', { x, z, sizeX, sizeZ, height, name, geometry, material });
+    }
+
+    function createGreenery() {
+        const greeneryCount = 150;
+        const greenerySize = 2;
+        const greeneryHeight = 0.5;
+        const greeneryMaterial = new THREE.MeshStandardMaterial({ color: color.greenery, roughness: 0.8 });
+
+        for (let i = 0; i < greeneryCount; i++) {
+            let posX, posZ, attempts = 0, positionFound = false;
+
+            while (!positionFound && attempts < 50) {
+                posX = (Math.random() - 0.5) * MAP_SIZE;
+                posZ = (Math.random() - 0.5) * MAP_SIZE;
+                if (!isNearRoad(posX, posZ, 1).isNear && !isColliding(posX, posZ, greenerySize, greenerySize)) {
+                    positionFound = true;
+                }
+                attempts++;
+            }
+            if (positionFound) {
+                const greeneryGeometry = new THREE.BoxGeometry(greenerySize, greeneryHeight, greenerySize);
+                createObject('greenery', {
+                    x: posX, z: posZ, sizeX: greenerySize, sizeZ: greenerySize, height: greeneryHeight,
+                    name: "Green Space",
+                    geometry: greeneryGeometry,
+                    material: greeneryMaterial
+                });
+            }
+        }
+    }
+
+    // --- Main Generation Flow ---
+    createMainRoads();
+    createSecondaryRoads();
+    placeBuildings();
+
+    function placeRandomSpecialBuilding(type, sizeX, sizeZ) {
+        let placed = false;
+        while (!placed) {
+            const x = (Math.random() - 0.5) * MAP_SIZE * 0.8;
+            const z = (Math.random() - 0.5) * MAP_SIZE * 0.8;
+            if (!isNearRoad(x, z, 5).isNear && !isColliding(x, z, sizeX, sizeZ)) {
+                createSpecialBuilding(x, z, type);
+                placed = true;
+            }
+        }
+    }
+    placeRandomSpecialBuilding('stadium', 30, 30);
+    placeRandomSpecialBuilding('admin_hall', 40, 25);
+    createGreenery();
+
+    // --- Mouse and Touch Interaction ---
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let intersectedObject = null;
+    const infoDiv = document.getElementById('info');
+    const detailsPanel = document.getElementById('details');
+    const detailName = document.getElementById('detail-name');
+    const detailType = document.getElementById('detail-type');
+    const detailPosition = document.getElementById('detail-position');
+
+    function onPointerMove(event) {
+        const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+        const clientY = event.touches ? event.touches[0].clientY : event.clientY;
+        mouse.x = (clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+    }
+
+    function highlightObject(object) {
+        if (!object || object.userData.type === 'greenery' || object.userData.type === 'special' || object.name === "BuildingLight") return;
+
+        if (intersectedObject && intersectedObject.material) {
+            intersectedObject.material.color.set(intersectedObject.userData.type === 'road' ? color.road : color.building);
+        }
+
+        intersectedObject = object;
+        if (intersectedObject && intersectedObject.material) {
+            intersectedObject.material.color.set(intersectedObject.userData.type === 'road' ? color.roadHighlight : color.buildingHighlight);
+            infoDiv.textContent = `Current Location: ${intersectedObject.name}`;
+        }
+    }
+
+    function onHover() {
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(scene.children);
+        const newIntersected = intersects.find(obj => obj.object !== ground);
+
+        if (newIntersected && newIntersected.object !== intersectedObject) {
+            highlightObject(newIntersected.object);
+        } else if (!newIntersected && intersectedObject) {
+            highlightObject(null);
+            infoDiv.textContent = "Welcome to Colorblock DAO!";
+        }
+    }
+
+    function onClick(event) {
+        event.preventDefault();
+        onPointerMove(event);
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(scene.children);
+
+        const clickedObject = intersects.find(obj => obj.object !== ground && obj.object.name !== "BuildingLight");
+        if (clickedObject && clickedObject.object.name) {
+            const obj = clickedObject.object;
+            detailName.textContent = `Name: ${obj.name}`;
+            detailType.textContent = `Type: ${obj.userData.type}`;
+            detailPosition.textContent = `Position: (${obj.position.x.toFixed(2)}, ${obj.position.y.toFixed(2)}, ${obj.position.z.toFixed(2)})`;
+            detailsPanel.style.display = 'block';
+        } else {
+            detailsPanel.style.display = 'none';
+        }
+    }
+
+    window.addEventListener('mousemove', onPointerMove);
+    window.addEventListener('click', onClick);
+    window.addEventListener('touchstart', onClick);
+
+    // --- Animation Loop ---
+    function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        onHover();
+        renderer.render(scene, camera);
+    }
+    animate();
+
+    // --- Window Resize ---
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+</script>
+</body>
+</html>
